@@ -11,18 +11,19 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(message_filters REQUIRED COMPONENTS sync_policies)
+find_package(cv_bridge REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core highgui videoio features2d)
 find_package(rclcpp_components REQUIRED)
 
 add_executable(infra1_pass src/infra1_pass.cpp)
-ament_target_dependencies(infra1_pass rclcpp sensor_msgs OpenCV rclcpp_components message_filters)
+ament_target_dependencies(infra1_pass rclcpp sensor_msgs cv_bridge OpenCV rclcpp_components message_filters)
 
 install(TARGETS infra1_pass
     DESTINATION lib/${PROJECT_NAME}
 )
 
 add_executable(image_subscriber src/image_subscriber.cpp)
-ament_target_dependencies(image_subscriber rclcpp sensor_msgs OpenCV rclcpp_components message_filters)
+ament_target_dependencies(image_subscriber rclcpp sensor_msgs cv_bridge OpenCV rclcpp_components message_filters)
 
 install(TARGETS image_subscriber
     DESTINATION lib/${PROJECT_NAME}

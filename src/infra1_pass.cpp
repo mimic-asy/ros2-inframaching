@@ -49,10 +49,13 @@ public:
     cv::Mat infr1_cv_image = cv_bridge::toCvShare(infr1_image,"mono8")->image;
     cv::Mat infr2_cv_image = cv_bridge::toCvShare(infr2_image,"mono8")->image;
 
-    //cv::imshow("Image", infr1_cv_image);
-    //cv::imshow("Image", infr2_cv_image);
+    RCLCPP_INFO(this->get_logger(), "Message timestamp1: '%d'", infr1_image->header.stamp.nanosec);
+    RCLCPP_INFO(this->get_logger(), "Message timestamp2: '%d'", infr2_image->header.stamp.nanosec);
 
-    //cv::waitKey(1);
+    cv::imshow("Image", infr1_cv_image);
+    cv::imshow("Image", infr2_cv_image);
+
+    cv::waitKey(1);
 
   }
 
