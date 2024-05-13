@@ -24,6 +24,15 @@ public:
   //sync_の引数には(同期の定義のキューサイズ,同期の定義の引数１, 同期の定義の引数2)が入る
   message_filters::Synchronizer<exacttime_policy> sync_;
 
+  struct kp_and_img
+  {
+    std::vector<cv::KeyPoint> kp;
+    cv::Mat img;
+    cv::Mat ds;
+
+  };
+
+
   // クラスのコンストラクタ ImageCombiner()を作成
   Infra_Subscriber()
       : Node("image_combiner_node"), sync_(exacttime_policy(10),infr1_, infr2_)
@@ -45,16 +54,69 @@ public:
         const sensor_msgs::msg::Image::SharedPtr infr1_image,
         const sensor_msgs::msg::Image::SharedPtr infr2_image)
   {
+    struct kp_and_img feature_infr1;
+    struct kp_and_img feature_infr2;
+
     //画像にする
     cv::Mat infr1_cv_image = cv_bridge::toCvShare(infr1_image,"mono8")->image;
     cv::Mat infr2_cv_image = cv_bridge::toCvShare(infr2_image,"mono8")->image;
 
-    RCLCPP_INFO(this->get_logger(), "Message timestamp1: '%d'", infr1_image->header.stamp.nanosec);
-    RCLCPP_INFO(this->get_logger(), "Message timestamp2: '%d'", infr2_image->header.stamp.nanosec);
+    //画像と特徴点を取得する
+    feature_infr1 = Feature_point(infr1_cv_image);
+    feature_infr2 = Feature_point(infr2_cv_image);
 
-    cv::imshow("Image", infr1_cv_image);
-    cv::imshow("Image", infr2_cv_image);
 
+    RCLCPP_INFO(this->get_logger(), "infr1 type is: '%d'", feature_infr1.img.type());
+    RCLCPP_INFO(this->get_logger(), "infr2 type is: '%d'", feature_infr2.img.type());
+
+    //取得した特徴点をマッチングして出力
+    matching_descriptor(feature_infr1,feature_infr2);
+
+  }
+
+  struct kp_and_img Feature_point(cv::Mat &grey_image)
+  {
+    std::vector<cv::KeyPoint> keypoints;
+    cv::Mat descriptors;
+    cv::Mat outimage;
+    struct kp_and_img output;
+
+    //Initiate ORB detector
+    cv::Ptr<cv::Feature2D> detector = cv::ORB::create(500,1.2f,8,31,0,2,cv::ORB::HARRIS_SCORE,31,10);
+
+    //find keypoints with orb
+    detector->detect(grey_image, keypoints, cv::noArray());
+
+    //compute the descriptors with ORB
+    detector->compute(grey_image,keypoints,descriptors);
+
+    //draw only keypoints location,not size and orientation
+    cv::Scalar red_color(0, 0, 255);
+    cv::drawKeypoints(grey_image,keypoints,outimage,red_color,cv::DrawMatchesFlags::DEFAULT);
+
+    output.kp = keypoints;
+    output.img = outimage;
+    output.ds = descriptors;
+
+    return output;
+
+  }
+
+  //画像の特徴点をマッチングさせる
+  void matching_descriptor(struct kp_and_img descriptor1,struct kp_and_img descriptor2)
+  {
+
+    cv::Mat img_match;
+    std::vector<std::vector<cv::DMatch>> matches;
+    cv::Ptr<cv::DescriptorMatcher> matcher  = cv::DescriptorMatcher::create ( "BruteForce-Hamming" );
+
+    //ハミング距離を使用してマッチングを行う
+    matcher->knnMatch(descriptor1.ds, descriptor2.ds, matches, 2, cv::noArray(), false);
+
+    //マッチングを描写
+    drawMatches ( descriptor1.img,descriptor1.kp, descriptor2.img, descriptor2.kp, matches, img_match );
+
+    cv::imshow("Image", img_match);
     cv::waitKey(1);
 
   }
